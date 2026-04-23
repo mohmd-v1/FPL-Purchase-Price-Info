@@ -1,0 +1,45 @@
+{
+    "manifest_version": 3,
+    "name": "FPL Purchase Price Info",
+    "version": "1.0",
+    "description": "extension to display purchase price on player information page",
+    "permissions": [
+        "storage"
+    ],
+    "host_permissions": [
+        "https://fantasy.premierleague.com/*",
+        "https://fpl.team/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://fantasy.premierleague.com/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "css": [
+                "styles.css"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icon16.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        },
+        "default_title": "FPL Purchase Price Info"
+    },
+    "options_page": "options.html"
+}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إعدادات FPL Purchase Price</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #541e5d 0%, #37003c 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      color: #764ba2;
+      margin-bottom: 10px;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      font-family: monospace;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .hint a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .hint a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 600;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    .current-id {
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-right: 4px solid #667eea;
+    }
+
+    .current-id-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .current-id-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #764ba2;
+      font-family: monospace;
+    }
+
+    .icon {
+      text-align: center;
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="icon">⚙️</div>
+    <h1>Settings</h1>
+    <p class="subtitle">FPL Purchase Price Info Extension</p>
+
+    <div class="current-id" id="currentIdSection" style="display: none;">
+      <div class="current-id-label">Current Team ID:</div>
+      <div class="current-id-value" id="currentTeamId">-</div>
+    </div>
+
+    <form id="settingsForm">
+      <div class="form-group">
+        <label for="teamId">🆔 Current Team ID</label>
+        <input type="text" id="teamId" name="teamId" placeholder="3022172" img src="test.png" pattern="[0-9]+" required>
+      </div>
+      <div class="hint">
+        Get your Team ID from your page link on
+        <a href="https://fantasy.premierleague.com/" target="_blank">fantasy.premierleague.com</a>
+        <br>
+        Example: <code>https://fantasy.premierleague.com/entry/3022172/event/20
+        </div>
+      <div>
+        <img src="test.png" style="width: calc(100% - 0px);">
+      </div>
+
+      <button type="submit">💾 Save Settings</button>
+    </form>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+
+</html>
