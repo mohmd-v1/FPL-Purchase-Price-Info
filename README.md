@@ -1,6 +1,7 @@
 # FPL Purchase Price Info Extension
 
 A Chrome extension that displays the purchase price of your Fantasy Premier League players right on the FPL website, fetching data seamlessly from fpl.team.
+<img width="1012" height="866" alt="Screenshot 2026-04-23 183125" src="https://github.com/user-attachments/assets/f3b998b5-0519-4b4c-8e90-589c2bc81259" />
 
 ## Features
 
@@ -10,14 +11,7 @@ A Chrome extension that displays the purchase price of your Fantasy Premier Leag
 - ⚡ Fast and lightweight
 
 ## Installation
-
-### Local Installation (Developer Mode)
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** in the top right corner
-3. Click on **Load unpacked**
-4. Select the extension directory
-5. The extension will now appear in your extensions list
+https://github.com/mohmd-v1/FPL-Purchase-Price-Info/releases/tag/1.0
 
 ## Usage
 
@@ -46,10 +40,3 @@ A Chrome extension that displays the purchase price of your Fantasy Premier Leag
 ### How to Change Team ID
 You can change your Team ID by clicking on the extension icon and clicking the settings button. Alternatively, open the browser console on the Fantasy Premier League page and type:
 ```javascript
-localStorage.removeItem('fpl_extension_team_id');
-```
-Then refresh the page.
-
-## Support
-
-If you encounter any issues, check the browser console (F12) to see if there are any error messages.
