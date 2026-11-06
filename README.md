@@ -1,7 +1,7 @@
 # FPL Purchase Price Info ⚽
 
 A lightweight Chrome/Brave Extension for **Fantasy Premier League (FPL)** that automatically displays essential squad financial stats directly on player information profiles.
-
+<img width="1012" height="866" alt="Screenshot 2026-04-23 183125" src="img.png" />
 ---
 
 ## 🌟 Features
