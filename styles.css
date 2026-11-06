@@ -1,79 +1,173 @@
-/* تنسيق معلومات سعر الشراء */
+/* كارت سعر الشراء — يندمج مع خانة السعر الأصلية في نافذة اللاعب */
 
 .fpl-purchase-info {
-  background: linear-gradient(135deg, #541e5d 0%, #37003c 100%);
-  border-radius: 8px;
-  padding: 4px 0;
-  animation: slideIn 0.3s ease-out;
-}
-
-.fpl-purchase-info ._1pge6781 {
-  position: relative;
-}
-
-/* عنوان "Purchase" */
-.fpl-purchase-info ._1pge6782 {
-  font-weight: 600 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ism-spacing-2xs, 4px) !important;
+  font-family: var(--ism-typeface-regular, Arial, sans-serif) !important;
+  font-size: var(--ism-font-size-body-s, 12px) !important;
   color: #fff !important;
-  font-size: 0.9em !important;
+  margin-top: 4px !important;
+  animation: fplFadeIn 0.25s ease-out;
 }
 
-/* القيمة الرئيسية - container للأسعار والسهم */
-.fpl-purchase-info ._1pge6783 {
+/* الصف: التسمية + القيم */
+.fpl-purchase-row {
   display: flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
   flex-wrap: wrap !important;
-  font-weight: 700 !important;
-  font-size: 1.1em !important;
+}
+
+/* "Purchased" */
+.fpl-purchase-label {
+  font-family: var(--ism-typeface-bold, Arial, "Helvetica Neue", sans-serif) !important;
+  font-size: 0.9em !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* مجموعة الأسعار */
+.fpl-purchase-values {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-family: var(--ism-typeface-bold, Arial, "Helvetica Neue", sans-serif) !important;
 }
 
 /* سعر الشراء الأصلي */
 .fpl-purchase-price {
-  color: #ffd700 !important;
+  color: #00ff87 !important;
 }
 
 /* السهم */
 .fpl-arrow {
-  color: #888 !important;
+  color: rgba(255, 255, 255, 0.6) !important;
   font-size: 0.9em !important;
 }
 
 /* السعر الحالي */
 .fpl-current-price {
-  color: #ffffff !important;
-  font-weight: 700 !important;
+  color: #fff !important;
 }
 
-/* الفرق (الربح/الخسارة) */
+/* الفرق (الربح/الخسارة) — على شكل pill صغير */
 .fpl-price-diff {
-  font-weight: 700 !important;
-  font-size: 0.9em !important;
+  font-size: 0.85em !important;
+  padding: 1px 6px !important;
+  border-radius: var(--ism-radius-full, 9999px) !important;
+  font-family: var(--ism-typeface-bold, Arial, "Helvetica Neue", sans-serif) !important;
 }
 
-/* لون أخضر للربح */
+/* أخضر للربح */
 .fpl-profit {
-  color: #00ff87 !important;
+  color: #37003c !important;
+  background: #00ff87 !important;
 }
 
-/* لون أحمر للخسارة */
+/* أحمر للخسارة */
 .fpl-loss {
-  color: #ff4757 !important;
+  color: #fff !important;
+  background: #ff1b54 !important;
 }
 
 /* سعر البيع */
-.fpl-extra-info {
-  display: block !important;
-  font-size: 0.85em !important;
-  color: #e0e0e0 !important;
-  margin-top: 4px !important;
+.fpl-sell-line {
+  font-size: 0.9em !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* شارة Predicted Progress الرسمية بجانب السعر */
+.fpl-pred-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-left: 8px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  vertical-align: middle !important;
+  cursor: help !important;
+  line-height: 1 !important;
+}
+
+.fpl-pred-badge svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  width: 15px !important;
+  height: 15px !important;
+  flex-shrink: 0 !important;
+}
+
+.fpl-pred-up {
+  color: #00ff87 !important;
+}
+
+.fpl-pred-up svg {
+  fill: #00ff87 !important;
+  color: #37003c !important;
+}
+
+.fpl-pred-down {
+  color: #ff3366 !important;
+}
+
+.fpl-pred-down svg {
+  fill: #e60023 !important;
+  color: #ffffff !important;
+}
+
+.fpl-pred-neutral {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* علامة التنبيه (؟) على قميص اللاعب في التشكيلة/الملعب برة */
+.fpl-pitch-alert-badge {
+  position: absolute !important;
+  top: 14px !important;
+  right: 2px !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #e60023 0%, #b3001b 100%) !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  border: 2px solid #ffffff !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  animation: fplPulseAlert 2s infinite !important;
+  transition: transform 0.15s ease !important;
+}
+
+.fpl-pitch-alert-badge:hover {
+  transform: scale(1.15) !important;
+}
+
+@keyframes fplPulseAlert {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 0, 35, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(230, 0, 35, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 0, 35, 0);
+  }
 }
 
 /* Animation */
-@keyframes slideIn {
+@keyframes fplFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-6px);
   }
 
   to {

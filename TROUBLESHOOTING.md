@@ -1,115 +1,49 @@
-# دليل استكشاف الأخطاء وحلها 🔧
+# دليل استكشاف الأخطاء وتحديث الإضافة 🔧
 
-## الخطوة 1: تحديث الإضافة في Chrome
+## تم التحديث إلى الإصدار 2.0 (Official FPL API) 🎉
 
-إذا كانت الإضافة مثبتة مسبقاً، يجب **إعادة تحميلها** لتطبيق التحديثات الجديدة:
+الإضافة الآن لا تحتاج إلى موقع `fpl.team` ولا تحتاج إلى إدخال `Team ID` يدوي!
+تعتمد الإضافة بنسبة 100% على الـ API الرسمي للفانتازي مباشرة من حسابك المسجل.
 
-1. افتح `chrome://extensions/`
-2. ابحث عن "FPL Purchase Price Info"
-3. اضغط على أيقونة **إعادة التحميل** (↻) الدائرية
-4. أو اضغط على زر **Remove** ثم أعد تحميلها بزر **Load unpacked**
+---
 
-## الخطوة 2: التحقق من تفعيل الإضافة
+## الخطوة 1: إعادة تحميل الإضافة في المتصفح
 
-✅ يجب أن يكون المفتاح بجانب اسم الإضافة **أزرق** (مفعّل)
-❌ إذا كان رمادي، اضغط عليه لتفعيل الإضافة
+1. افتح صفحة الإضافات في متصفحك: `brave://extensions/` أو `chrome://extensions/`
+2. ابحث عن **FPL Purchase Price Info**
+3. اضغط على أيقونة **إعادة التحميل (↻)** لتطبيق الكود الجديد.
 
-## الخطوة 3: فتح Console للمراقبة
+---
 
-1. افتح موقع https://fantasy.premierleague.com/
-2. اضغط `F12` لفتح أدوات المطور
-3. انتقل إلى تبويب **Console**
-4. يجب أن ترى الرسائل التالية:
-   ```
-   🟢 FPL Purchase Price Extension: Starting...
-   👀 Setting up MutationObserver...
-   ✅ Observer active and monitoring for dialogs
-   ✅ FPL Purchase Price Info Extension fully loaded!
-   ```
+## الخطوة 2: التجربة في صفحة الفانتازي
 
-## الخطوة 4: فتح صفحة لاعب واختبار
+1. افتح أي صفحة في الفانتازي (مثل `https://fantasy.premierleague.com/en/transfers` أو صفحة الـ `Pick Team`)
+2. تأكد أنك مسجل دخول بحسابك في الفانتازي.
+3. اضغط على علامة **(i)** بجانب أي لاعب في تشكيلتك لفتح بطاقة معلومات اللاعب (Player Dialog).
+4. ستجد تحت خانة السعر `Price:` مباشرة:
+   * **Purchased:** سعر شرائك للاعب `£X.Xm`
+   * **السعر الحالي مع حساب الربح/الخسارة:** مثلاً `+0.2m` بالأخضر أو الأحمر
+   * **Sell:** سعر البيع الفعلي للاعب `£X.Xm`
 
-1. اذهب إلى صفحة **Statistics** أو **Transfers**
-2. اضغط على أيقونة **i** لأي لاعب
-3. راقب Console - يجب أن ترى:
-   ```
-   🎯 Player dialog detected!
-   🔍 Extracting player info from dialog...
-   🖼️ Player image found: https://...
-   ✅ Player ID extracted: 204480
-   🔍 Attempting to get Team ID...
-   ```
+---
 
-### إذا ظهرت رسالة طلب Team ID:
-- أدخل معرف فريقك من fpl.team (مثل `3022172`)
-- اضغط OK
-- سيتم حفظه تلقائياً
+## التحقق من عمل الإضافة في الـ Console (F12)
 
-### بعد إدخال Team ID:
-يجب أن ترى في Console:
-```
-📡 Fetching from: https://fpl.team/plan/3022172/
-✅ HTML fetched, length: 123456
-✅ Player data found: {purchasePrice: "6.6", sellPrice: "6.8", currentPrice: "7.1"}
-✅ Purchase info added successfully!
+عند فتح أدوات المطور (F12) في صفحة الفانتازي واختيار تبويب **Console**، ستشاهد الرسائل التالية عند الضغط على أي لاعب:
+```text
+🟢 FPL Purchase Price Extension: Starting (Official FPL API mode)...
+✅ Loaded 15 squad players with official purchase prices!
+🎯 Identified player ID 226 from photo code 111234
+✅ Official purchase info injected successfully!
 ```
 
-## المشاكل الشائعة وحلولها
+---
 
-### ❌ لا تظهر رسائل Extension في Console
+## الأسئلة الشائعة
 
-**الحل:**
-- تأكد من تفعيل الإضافة في `chrome://extensions/`
-- أعد تحميل الصفحة (F5)
-- أعد تحميل الإضافة من `chrome://extensions/`
+### ❓ هل تظهر الأسعار لجميع اللاعبين؟
+تظهر أسعار الشراء والبيع **للاعبين الموجودين في تشكيلتك الحالية فقط**، لأن الموقع الرسمي يسجل سعر الشراء للاعبي فريقك أنت فقط. بقية لاعبي الفرق الأخرى يعرض الموقع سعرهم الحالي العام.
 
-### ❌ تظهر رسالة "Player not found in team data"
-
-**السبب:** اللاعب ليس في فريقك على fpl.team
-
-**الحل:** الإضافة تعمل فقط مع اللاعبين الموجودين في فريقك
-
-### ❌ تظهر رسالة CORS error
-
-**الحل:**
-1. تأكد من السماح بـ host permissions في manifest.json
-2. في `chrome://extensions/` ← تفاصيل الإضافة ← Site access ← اختر "On all sites"
-
-### ❌ تظهر رسالة "Stats container not found"
-
-**السبب:** تغيير في بنية HTML للموقع
-
-**الحل:** أبلغني وسأقوم بتحديث الـ selectors
-
-### ❌ لا تظهر المعلومات حتى مع رسائل نجاح في Console
-
-**الحل:**
-1. افحص Console للتأكد من عدم وجود أخطاء CSS
-2. افحص العنصر بـ Inspect Element وابحث عن `.fpl-purchase-info`
-3. تأكد من تحميل ملف `styles.css`
-
-## اختبار سريع - Checklist ✓
-
-- [ ] الإضافة مفعّلة في chrome://extensions/
-- [ ] رسالة "Extension fully loaded" تظهر في Console
-- [ ] Team ID تم إدخاله وحفظه
-- [ ] صفحة اللاعب مفتوحة في dialog
-- [ ] اللاعب موجود في فريقك على fpl.team
-- [ ] رسالة "Purchase info added successfully" ظهرت
-
-## تغيير Team ID
-
-إذا أدخلت Team ID خاطئ:
-
-افتح Console واكتب:
-```javascript
-localStorage.removeItem('fpl_extension_team_id');
-location.reload();
-```
-
-## طلب المساعدة
-
-إذا استمرت المشكلة:
-1. التقط صورة شاشة للـ Console بعد فتح صفحة لاعب
-2. أرسلها مع وصف المشكلة
-3. اذكر Team ID الخاص بك
+### ❓ ماذا لو لم تظهر البيانات بعد الضغط على لاعب في فريقي؟
+1. تأكد من عمل تحديث (Reload - F5) لصفحة الفانتازي بعد تحديث الإضافة.
+2. تأكد أنك مسجل دخول في حسابك في موقع الفانتازي.

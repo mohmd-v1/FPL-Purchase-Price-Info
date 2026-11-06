@@ -1,450 +1,429 @@
-// FPL Purchase Price Info Extension v4
-// يستخدم FPL Bootstrap API + fpl.team API
+// FPL Purchase Price Info Extension v5.8 (Exact FPL Selling Economics Warning)
+// يعتمد كلياً على الـ API الرسمي للفانتازي بدون أي مواقع خارجية
 
-console.log('🟢 FPL Purchase Price Extension v4: Starting...');
+console.log('🟢 FPL Purchase Price Extension: Starting (Official FPL API mode)...');
 
-// Cache للاعبين
-let playersCache = null;
+// Caches
+let bootstrapCache = null;      // code -> element_id & info
+let myTeamPicksMap = null;      // element_id -> { purchase_price, selling_price, predictedProgress, currentProgress }
+let isFetchingTeam = false;
+let activePlayerId = null;       // معرّف اللاعب المعروض حالياً في الـ Dialog
+let ensureTimer = null;
+let pitchTimer = null;
 
-// الحصول على معرف الفريق من chrome.storage أو localStorage
-async function getTeamId() {
-  console.log('🔍 Attempting to get Team ID...');
+// Official FPL Up & Down SVGs
+const SVG_UP = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" class="_1axm9e10" title="up"><g fill-rule="evenodd"><path d="M8,16 C8.85354691,16 9.67587305,15.866328 10.4471863,15.618776 C13.6684789,14.5849062 16,11.5647311 16,8 C16,3.581722 12.418278,0 8,0 C3.581722,0 0,3.581722 0,8 C0,12.418278 3.581722,16 8,16 Z"></path><path fill="currentColor" fill-rule="nonzero" d="M4.5,6.27851588 L5.1004646,5.63925794 C5.43077928,5.2876031 5.70475818,5 5.70967916,5 C5.71460014,5 6.23194007,5.54639596 6.85921456,6.2144865 L8,7.428973 L9.14078544,6.2144865 C9.76831893,5.5467015 10.2856309,5 10.2903208,5 C10.2952427,5 10.5695007,5.28761055 10.8995354,5.63925794 L11.5,6.27851588 L9.75217699,8.13925794 C8.79080084,9.16274432 8.00246399,10 8.000014,10 C7.99756401,10 7.20894716,9.16281884 6.24785101,8.13925794 L4.5,6.27851588 Z"></path></g></svg>`;
 
+const SVG_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" class="_1axm9e11" title="down"><g fill-rule="evenodd"><path d="M8,16 C8.85354691,16 9.67587305,15.866328 10.4471863,15.618776 C13.6684789,14.5849062 16,11.5647311 16,8 C16,3.581722 12.418278,0 8,0 C3.581722,0 0,3.581722 0,8 C0,12.418278 3.581722,16 8,16 Z"></path><path fill="currentColor" fill-rule="nonzero" d="M4.5,6.27851588 L5.1004646,5.63925794 C5.43077928,5.2876031 5.70475818,5 5.70967916,5 C5.71460014,5 6.23194007,5.54639596 6.85921456,6.2144865 L8,7.428973 L9.14078544,6.2144865 C9.76831893,5.5467015 10.2856309,5 10.2903208,5 C10.2952427,5 10.5695007,5.28761055 10.8995354,5.63925794 L11.5,6.27851588 L9.75217699,8.13925794 C8.79080084,9.16274432 8.00246399,10 8.000014,10 C7.99756401,10 7.20894716,9.16281884 6.24785101,8.13925794 L4.5,6.27851588 Z" transform="matrix(1 0 0 -1 0 15)"></path></g></svg>`;
+
+// 1. جلب بيانات التشكيلة والتوقعات عبر الـ Page Bridge
+function requestSquadDataFromBridge() {
   return new Promise((resolve) => {
-    // Try chrome.storage first
-    chrome.storage.local.get(['fpl_extension_team_id'], (result) => {
-      if (result.fpl_extension_team_id) {
-        console.log('✅ Found Team ID in chrome.storage:', result.fpl_extension_team_id);
-        // Sync to localStorage
-        localStorage.setItem('fpl_extension_team_id', result.fpl_extension_team_id);
-        resolve(result.fpl_extension_team_id);
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', onMessage);
+      resolve(null);
+    }, 5000);
+
+    function onMessage(event) {
+      if (event.source !== window || !event.data || event.data.type !== 'FPL_RESPONSE_MY_TEAM') {
         return;
       }
+      clearTimeout(timeout);
+      window.removeEventListener('message', onMessage);
 
-      // Fallback to localStorage
-      try {
-        const savedTeamId = localStorage.getItem('fpl_extension_team_id');
-        if (savedTeamId) {
-          console.log('✅ Found Team ID in localStorage:', savedTeamId);
-          // Migrate to chrome.storage
-          chrome.storage.local.set({ fpl_extension_team_id: savedTeamId });
-          resolve(savedTeamId);
-          return;
-        }
-      } catch (e) {
-        console.error('❌ Error accessing localStorage:', e);
-      }
+      if (event.data.success && Array.isArray(event.data.picks)) {
+        const map = new Map();
+        const predictions = event.data.predictions || {};
 
-      // No Team ID found - prompt user
-      console.log('⚠️ No Team ID found, prompting user...');
-      const teamId = prompt('من فضلك أدخل معرف فريقك (Team ID) من موقع fpl.team\nمثال: 3022172\n\nيمكنك تغييره لاحقاً بالضغط على أيقونة الإضافة');
-
-      if (teamId) {
-        // Save to both
-        chrome.storage.local.set({ fpl_extension_team_id: teamId });
-        localStorage.setItem('fpl_extension_team_id', teamId);
-        console.log('✅ Team ID saved:', teamId);
-        resolve(teamId);
+        event.data.picks.forEach(pick => {
+          const pred = predictions[pick.element];
+          map.set(pick.element, {
+            elementId: pick.element,
+            purchasePrice: (pick.purchase_price / 10).toFixed(1),
+            sellPrice: (pick.selling_price / 10).toFixed(1),
+            predictedProgress: pred ? pred.predictedProgress : null,
+            currentProgress: pred ? pred.currentProgress : null
+          });
+        });
+        resolve(map);
       } else {
-        console.log('❌ No Team ID provided');
+        console.warn('⚠️ Bridge response error:', event.data.error);
         resolve(null);
       }
-    });
+    }
+
+    window.addEventListener('message', onMessage);
+    window.postMessage({ type: 'FPL_REQUEST_MY_TEAM' }, '*');
   });
 }
 
-// الحصول على بيانات كل اللاعبين من FPL Bootstrap API
-async function fetchAllPlayers() {
-  if (playersCache) {
-    console.log('📦 Using cached players data');
-    return playersCache;
-  }
+// 2. جلب بيانات اللاعبين من FPL Bootstrap API (ربط photo/code بـ element ID)
+async function getBootstrapData() {
+  if (bootstrapCache) return bootstrapCache;
 
   try {
     console.log('🌐 Fetching FPL Bootstrap data...');
-    const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+    const response = await fetch('/api/bootstrap-static/');
     const data = await response.json();
 
-    // بناء mapping: FPL ID -> Player Info
-    playersCache = {};
+    const codeToId = new Map();
+    const nameToId = new Map();
+    const idToElement = new Map();
+
     data.elements.forEach(player => {
-      playersCache[player.id] = {
-        id: player.id,
-        name: player.web_name,  // اسم اللاعب
-        firstName: player.first_name,
-        secondName: player.second_name,
-        team: player.team
-      };
+      codeToId.set(String(player.code), player.id);
+      nameToId.set(player.web_name.toLowerCase(), player.id);
+      nameToId.set(`${player.first_name} ${player.second_name}`.toLowerCase(), player.id);
+      idToElement.set(player.id, player);
     });
 
-    console.log(`✅ Loaded ${Object.keys(playersCache).length} players from FPL API`);
-    return playersCache;
+    bootstrapCache = { codeToId, nameToId, idToElement, rawElements: data.elements };
+    console.log(`✅ Loaded ${data.elements.length} players from FPL Bootstrap`);
+    return bootstrapCache;
   } catch (error) {
     console.error('❌ Error fetching FPL bootstrap:', error);
     return null;
   }
 }
 
-// الحصول على FPL Player ID من الاسم
-function getFPLPlayerIdByName(playerName, allPlayers) {
-  for (const [id, player] of Object.entries(allPlayers)) {
-    if (player.name.toLowerCase() === playerName.toLowerCase() ||
-      player.secondName.toLowerCase() === playerName.toLowerCase()) {
-      console.log(`✅ Found FPL ID ${id} for ${playerName}`);
-      return id;
-    }
+// 3. جلب وتحديث كاش التشكيلة
+async function loadMyTeamPicks(forceRefresh = false) {
+  if (myTeamPicksMap && !forceRefresh) return myTeamPicksMap;
+  if (isFetchingTeam) return null;
+
+  isFetchingTeam = true;
+  console.log('📡 Requesting squad data from page bridge...');
+  const map = await requestSquadDataFromBridge();
+  isFetchingTeam = false;
+
+  if (map && map.size > 0) {
+    myTeamPicksMap = map;
+    console.log(`✅ Successfully loaded ${map.size} squad players with official prices & predictions!`);
+    return myTeamPicksMap;
   }
-  console.log(`⚠️ No FPL ID found for ${playerName}`);
+
   return null;
 }
 
-// استخراج البيانات من fpl.team عبر background script (لتجنب CORS)
-async function fetchPlayerPrices(teamId, playerName) {
-  console.log(`🌐 Requesting prices for "${playerName}" from background script...`);
-  console.log(`📋 TeamID value: "${teamId}", type: ${typeof teamId}`);
+// 4. استخراج معرّف اللاعب واسمه من الـ Dialog
+async function extractPlayerInfoFromDialog(dialog) {
+  const bootstrap = await getBootstrapData();
+  if (!bootstrap) return null;
 
-  return new Promise((resolve, reject) => {
-    // إرسال رسالة للـ background script - Ensure teamId is string
-    chrome.runtime.sendMessage(
-      {
-        action: 'fetchPlayerPrices',
-        teamId: String(teamId),  // Force convert to string
-        playerName
-      },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('❌ Runtime error:', chrome.runtime.lastError);
-          reject(chrome.runtime.lastError);
-          return;
-        }
+  let playerId = null;
+  let playerName = null;
 
-        if (!response || !response.success) {
-          const errorMsg = response?.error || 'No response';
-          console.error('❌ Fetch failed:', errorMsg);
+  // الطريقة 1: من صورة البروفايل
+  const img = dialog.querySelector('img[src*="photos/players"], img[src*="premierleague"]');
+  if (img && img.src) {
+    const match = img.src.match(/(\d+)\.(png|jpg)/i);
+    if (match && match[1]) {
+      const code = match[1];
+      playerId = bootstrap.codeToId.get(code);
+    }
+  }
 
-          // Alert user if Team ID is wrong
-          if (errorMsg.includes('404') || errorMsg.includes('غير موجود')) {
-            alert(`⚠️ خطأ في Team ID!\n\nالـ Team ID ${teamId} غير موجود على fpl.team\n\nالحل:\n✅ اضغط على أيقونة الإضافة 📊\n✅ زر "تغيير Team ID"\n✅ أدخل الرقم الصحيح من fpl.team`);
-          }
-
-          reject(new Error(errorMsg));
-          return;
-        }
-
-        console.log('✅ Received HTML from background, parsing...');
-
-        // تحليل HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(response.html, 'text/html');
-
-        // البحث عن اللاعب
-        const allPlayers = doc.querySelectorAll('[data-player-name]');
-        console.log(`📋 Found ${allPlayers.length} players in HTML`);
-
-        // محاولة المطابقة بطرق متعددة
-        let foundPlayer = null;
-        const searchNameLower = playerName.toLowerCase();
-
-        for (const playerDiv of allPlayers) {
-          const name = playerDiv.getAttribute('data-player-name');
-          if (!name) continue;
-
-          const nameLower = name.toLowerCase();
-
-          // المطابقة 1: تطابق كامل
-          if (nameLower === searchNameLower) {
-            foundPlayer = playerDiv;
-            console.log(`✅ Exact match found: "${name}"`);
-            break;
-          }
-
-          // المطابقة 2: تطابق جزئي (للأسماء المختصرة مثل "Bruno G.")
-          if (nameLower.includes(searchNameLower) || searchNameLower.includes(nameLower)) {
-            foundPlayer = playerDiv;
-            console.log(`✅ Partial match found: "${name}" ~ "${playerName}"`);
-            break;
-          }
-
-          // المطابقة 3: تطابق الكلمة الأخيرة (اللقب)
-          const lastWordSearch = searchNameLower.split(/\s+/).pop();
-          const lastWordName = nameLower.split(/\s+/).pop();
-          if (lastWordSearch === lastWordName && lastWordSearch.length > 3) {
-            foundPlayer = playerDiv;
-            console.log(`✅ Last name match found: "${name}" (${lastWordName}) ~ "${playerName}" (${lastWordSearch})`);
-            break;
-          }
-        }
-
-        if (foundPlayer) {
-          const purchasePrice = foundPlayer.getAttribute('data-player-purchase-price');
-          const sellPrice = foundPlayer.getAttribute('data-player-sell-price');
-          const currentPrice = foundPlayer.getAttribute('data-player-price');
-          const matchedName = foundPlayer.getAttribute('data-player-name');
-
-          console.log('✅ Found prices:', {
-            matchedName,
-            purchasePrice,
-            sellPrice,
-            currentPrice
-          });
-
-          resolve({
-            playerName: matchedName,
-            purchasePrice,
-            sellPrice,
-            currentPrice
-          });
-        } else {
-          console.log('⚠️ Player not in your fpl.team squad');
-          console.log('Available players:', Array.from(allPlayers).slice(0, 10).map(p => p.getAttribute('data-player-name')).join(', '));
-          resolve(null);
-        }
+  // من عنوان h1
+  const h1 = dialog.querySelector('h1');
+  if (h1) {
+    const fullText = h1.textContent.replace('Player Profile:', '').trim();
+    const parts = fullText.split(/\s+/).filter(Boolean);
+    if (parts.length > 0) {
+      playerName = parts[parts.length - 1]; // اللقب
+    }
+    if (!playerId) {
+      if (parts.length > 0 && bootstrap.nameToId.has(parts[parts.length - 1].toLowerCase())) {
+        playerId = bootstrap.nameToId.get(parts[parts.length - 1].toLowerCase());
+      } else if (bootstrap.nameToId.has(parts.join(' ').toLowerCase())) {
+        playerId = bootstrap.nameToId.get(parts.join(' ').toLowerCase());
       }
-    );
-  });
+    }
+  }
+
+  if (playerId && !playerName && bootstrap.idToElement.has(playerId)) {
+    playerName = bootstrap.idToElement.get(playerId).web_name;
+  }
+
+  return playerId ? { playerId, playerName } : null;
 }
 
-// إضافة معلومات السعر إلى صفحة اللاعب
-function addPurchaseInfo(playerData) {
-  console.log('📝 Adding purchase info to page...', playerData);
+// 5. البحث عن سكشن السعر في الـ Dialog
+function findPriceSection(dialog) {
+  if (!dialog) return null;
 
-  if (!playerData || !playerData.purchasePrice) {
-    console.log('⚠️ No purchase price data');
-    return;
-  }
+  let section = dialog.querySelector('[class*="_priceSection_"]') ||
+                dialog.querySelector('[class*="priceSection"]');
 
-  // حذف القديم إذا وجد
-  const existing = document.querySelector('.fpl-purchase-info');
-  if (existing) {
-    existing.remove();
-    console.log('🗑️ Removed old purchase info');
-  }
-
-  // البحث عن الحاوية الجديدة حسب طلب المستخدم
-  const statsContainer = document.querySelector('._1j8cm7va');
-
-  if (!statsContainer) {
-    console.error('❌ Stats container (._1j8cm7va) not found');
-    console.log('🔍 Available containers:', document.querySelectorAll('[class*="_1vuagv"]'));
-    return;
-  }
-
-  console.log('✅ Found container:', statsContainer.className);
-
-  // حساب الفرق (الربح/الخسارة)
-  const purchasePrice = parseFloat(playerData.purchasePrice);
-  const currentPrice = parseFloat(playerData.currentPrice);
-  const difference = currentPrice - purchasePrice;
-  const differenceText = difference >= 0 ? `+${difference.toFixed(1)}` : difference.toFixed(1);
-  const diffColor = difference >= 0 ? '#00ff87' : '#ff4757'; // أخضر للربح، أحمر للخسارة
-
-  console.log(`💰 Price: Buy ${purchasePrice} | Now ${currentPrice} | Diff ${differenceText}`);
-
-  // إنشاء عنصر جديد
-  const purchaseItem = document.createElement('li');
-  purchaseItem.className = '_1pge6780 fpl-purchase-info';
-
-  // حساب class الربح/الخسارة
-  const diffClass = difference >= 0 ? 'fpl-profit' : 'fpl-loss';
-
-  purchaseItem.innerHTML = `
-    <div class="_1pge6781">
-      <span class="_1pge6782" id="stat-title-purchase">Purchase→Current💲
-      <span class="_1pge6783" id="stat-value-purchase">
-        <span class="fpl-purchase-price">£${playerData.purchasePrice}m</span>
-        <span class="fpl-arrow">→</span>
-        <span class="fpl-current-price">£${playerData.currentPrice}m</span>
-        <span class="fpl-price-diff ${diffClass}">(${differenceText}m)</span>
-      </span>
-      <span class="_1pge6784 fpl-extra-info">
-        Sell: £${playerData.sellPrice}m
-      </span>
-    </div>
-  `;
-
-  statsContainer.insertBefore(purchaseItem, statsContainer.firstChild);
-  console.log('✅ Purchase info added successfully!');
-}
-
-// استخراج معلومات اللاعب من dialog
-async function extractAndDisplayPlayerInfo(dialog) {
-  console.log('🔍 Extracting player info from dialog...');
-
-  try {
-    // محاولات متعددة للحصول على اسم اللاعب
-    let playerName = null;
-
-    // الطريقة 1: من عنوان h1
-    const h1 = dialog.querySelector('h1');
-    if (h1) {
-      // البحث عن آخر div في h1 (عادة يحتوي على اللقب)
-      const nameDiv = h1.querySelector('div[class*="_5kfev07"]');
-      if (nameDiv) {
-        playerName = nameDiv.textContent.trim();
-        console.log('✅ Method 1 - Player name from _5kfev07:', playerName);
-      }
-    }
-
-    // الطريقة 2: البحث في كل divs داخل h1
-    if (!playerName && h1) {
-      const allDivs = h1.querySelectorAll('div');
-      if (allDivs.length >= 2) {
-        // عادة الاسم الأخير (اللقب) في آخر div
-        playerName = allDivs[allDivs.length - 1].textContent.trim();
-        console.log('✅ Method 2 - Player name from last div in h1:', playerName);
-      }
-    }
-
-    // الطريقة 3: من title الصفحة
-    if (!playerName) {
-      const titleElement = dialog.querySelector('h2[id*="sheet-title"]');
-      if (titleElement) {
-        // استخراج الاسم من title
-        const titleText = titleElement.textContent;
-        console.log('📝 Title text:', titleText);
-      }
-    }
-
-    // الطريقة 4: مباشرة من h1 text content
-    if (!playerName && h1) {
-      const fullText = h1.textContent.trim();
-      // عادة يكون بصيغة "FirstName LastName"
-      const parts = fullText.split(/\s+/);
-      if (parts.length > 0) {
-        playerName = parts[parts.length - 1]; // آخر كلمة
-        console.log('✅ Method 4 - Player name from h1 split:', playerName);
-      }
-    }
-
-    if (!playerName) {
-      console.error('❌ Could not extract player name from dialog');
-      console.log('📋 Dialog HTML:', dialog.innerHTML.substring(0, 500));
-      return;
-    }
-
-    console.log('✅ Final player name:', playerName);
-
-    // تحويل الأسماء الكاملة إلى صيغة مختصرة للبحث
-    // مثال: "Guimarães Rodriguez Moura" → ["Guimarães Rodriguez Moura", "Moura", "Bruno G."]
-    const searchVariants = [playerName]; // الاسم الأصلي
-
-    // استخراج كل الأسماء من h1 للحصول على الاسم الأول
-    if (h1) {
-      const allDivs = h1.querySelectorAll('div');
-      if (allDivs.length >= 2) {
-        const firstName = allDivs[0].textContent.trim(); // الاسم الأول
-        const lastName = allDivs[allDivs.length - 1].textContent.trim(); // اللقب
-
-        // إضافة اللقب فقط كخيار
-        if (lastName && lastName !== playerName) {
-          searchVariants.push(lastName);
-        }
-
-        // إنشاء نسخة مختصرة: "FirstName L."
-        if (firstName && lastName) {
-          const lastNameParts = lastName.split(/\s+/);
-          if (lastNameParts.length > 0) {
-            const abbreviated = `${firstName} ${lastNameParts[0][0]}.`;
-            searchVariants.push(abbreviated);
-            console.log(`📝 Created abbreviated variant: "${abbreviated}"`);
-          }
-        }
-      }
-    }
-
-    console.log('🔍 Search variants:', searchVariants);
-
-
-    // الحصول على Team ID
-    const teamId = await getTeamId();
-    if (!teamId) {
-      console.log('❌ No Team ID');
-      return;
-    }
-
-    // جلب أسعار اللاعب من fpl.team - جرب كل الأسماء المحتملة
-    let playerPrices = null;
-    for (const variant of searchVariants) {
-      console.log(`🔎 Trying variant: "${variant}"`);
-      playerPrices = await fetchPlayerPrices(teamId, variant);
-      if (playerPrices) {
-        console.log(`✅ Match found with variant: "${variant}"`);
+  if (!section) {
+    const allDivs = Array.from(dialog.querySelectorAll('div')).reverse();
+    for (const div of allDivs) {
+      if (div.textContent.trim().startsWith('Price:') && div.children.length <= 2) {
+        section = div;
         break;
       }
     }
+  }
 
-    if (playerPrices) {
-      addPurchaseInfo(playerPrices);
-    } else {
-      console.log('⚠️ Player not in your team or data unavailable after trying all variants');
+  return section;
+}
+
+// 6. حقن كارت سعر الشراء وشارة Predicted Progress في الـ Dialog
+function addPurchaseInfo(dialog, pickData, playerName) {
+  if (!pickData || !pickData.purchasePrice) return;
+
+  const priceSection = findPriceSection(dialog);
+  if (!priceSection) {
+    return;
+  }
+
+  // 1) إضافة شارة Predicted Progress الرسمية بجانب "Price: £Xm"
+  const predictedVal = pickData.predictedProgress;
+  const priceSpan = priceSection.querySelector('span');
+
+  if (priceSpan && predictedVal !== null && predictedVal !== undefined) {
+    let predBadge = priceSpan.querySelector('.fpl-pred-badge');
+    if (!predBadge) {
+      predBadge = document.createElement('span');
+      predBadge.className = 'fpl-pred-badge';
+      priceSpan.appendChild(predBadge);
     }
 
-  } catch (error) {
-    console.error('❌ Error:', error);
+    const numVal = parseFloat(String(predictedVal).replace('%', ''));
+    const formattedVal = (numVal > 0 ? `+${numVal}` : `${numVal}`) + '%';
+
+    let badgeClass = 'fpl-pred-neutral';
+    let iconSvg = '';
+
+    if (numVal > 0) {
+      badgeClass = 'fpl-pred-up';
+      iconSvg = SVG_UP;
+    } else if (numVal < 0) {
+      badgeClass = 'fpl-pred-down';
+      iconSvg = SVG_DOWN;
+    }
+
+    predBadge.className = `fpl-pred-badge ${badgeClass}`;
+    predBadge.title = `Predicted Progress: ${formattedVal}`;
+    predBadge.innerHTML = `${iconSvg} <span>${formattedVal}</span>`;
   }
+
+  // 2) التحقق من كارت سعر الشراء وتجديده
+  if (priceSection.querySelector('.fpl-purchase-info')) {
+    return;
+  }
+
+  const existing = dialog.querySelectorAll('.fpl-purchase-info');
+  existing.forEach(el => el.remove());
+
+  let currentPrice = pickData.sellPrice;
+  const priceText = priceSection.textContent;
+  const priceMatch = priceText.match(/£([\d\.]+)m?/);
+  if (priceMatch && priceMatch[1]) {
+    currentPrice = priceMatch[1];
+  }
+
+  const purchasePriceVal = parseFloat(pickData.purchasePrice);
+  const currentPriceVal = parseFloat(currentPrice);
+  const diff = (currentPriceVal - purchasePriceVal).toFixed(1);
+  const diffSign = diff >= 0 ? `+${diff}` : `${diff}`;
+  const diffClass = diff >= 0 ? 'fpl-profit' : 'fpl-loss';
+
+  const card = document.createElement('div');
+  card.className = 'fpl-purchase-info';
+  card.innerHTML = `
+    <div class="fpl-purchase-row">
+      <span class="fpl-purchase-label">Purchased</span>
+      <span class="fpl-purchase-values">
+        <span class="fpl-purchase-price">£${pickData.purchasePrice}m</span>
+        <span class="fpl-arrow">→</span>
+        <span class="fpl-current-price">£${currentPrice}m</span>
+        <span class="fpl-price-diff ${diffClass}">${diffSign}m</span>
+      </span>
+    </div>
+    <span class="fpl-sell-line">Sell: £${pickData.sellPrice}m</span>
+  `;
+
+  priceSection.appendChild(card);
 }
 
-// مراقبة فتح صفحة معلومات اللاعب
-function observePlayerDialog() {
-  console.log('👀 Setting up MutationObserver...');
+// 7. التحقق من شروط التنبيه (؟) على اللاعب في الملعب برة
+// الشروط الدقيقة المطلوبة:
+// 1. اللاعب على وشك انخفاض سعره بنسبة 75% فأكثر (Predicted Progress بالسالب: <= -75%)
+// 2. فارق السعر الحالي عن الشراء مكسب موجب (Profit > 0)
+// 3. الرقم بعد العلامة العشرية مباشرة عدد زوجي (أو فرق السعر الكلي 0.2, 0.4, 0.6, 0.8...)
+function shouldShowPitchAlert(pickData, currentMarketPrice) {
+  if (!pickData || pickData.predictedProgress === null || pickData.predictedProgress === undefined) {
+    return false;
+  }
 
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1) {
-          let playerDialog = null;
+  // 1) نسبة نقص السعر 75% فما فوق (بالسالب يعني -75% أو -80% أو -98% أو -100%)
+  const predNum = parseFloat(String(pickData.predictedProgress).replace('%', ''));
+  if (isNaN(predNum) || predNum > -75) {
+    return false;
+  }
 
-          if (node.getAttribute && node.getAttribute('role') === 'dialog') {
-            playerDialog = node;
-          } else {
-            playerDialog = node.querySelector('[role="dialog"]');
-          }
+  // 2) مقارنة سعر السوق الأصلي مع سعر الشراء
+  const purchasePriceVal = parseFloat(pickData.purchasePrice);
+  const marketPriceVal = parseFloat(currentMarketPrice);
+  if (isNaN(purchasePriceVal) || isNaN(marketPriceVal)) return false;
 
-          if (playerDialog) {
-            console.log('🎯 Player dialog detected!');
-            setTimeout(() => {
-              extractAndDisplayPlayerInfo(playerDialog);
-            }, 1000);
-          }
+  const rawDiff = +(marketPriceVal - purchasePriceVal).toFixed(1);
+  if (rawDiff <= 0) {
+    return false; // ليس في حالة مكسب
+  }
+
+  // 3) فحص الرقم بعد العلامة العشرية مباشرة هل هو زوجي (2, 4, 6, 8, 0)
+  // مثال: 0.2 -> 2, 0.4 -> 4, 0.8 -> 8, 1.2 -> 2, 2.6 -> 6
+  // وأيضاً لو فارق سعر البيع (Selling Price - Purchase) زوجي
+  const sellPriceVal = parseFloat(pickData.sellPrice);
+  const sellDiff = +(sellPriceVal - purchasePriceVal).toFixed(1);
+
+  const marketDecimal = Math.round(Math.abs(rawDiff) * 10) % 10;
+  const sellDecimal = Math.round(Math.abs(sellDiff) * 10) % 10;
+
+  const isDecimalEven = (marketDecimal % 2 === 0) || (sellDiff > 0 && sellDecimal % 2 === 0);
+
+  return isDecimalEven;
+}
+
+// 8. حقن علامة (؟) على أزرار اللاعبين في الملعب/التشكيلة برة
+async function updatePitchAlertBadges() {
+  const pitchButtons = document.querySelectorAll('button[data-pitch-element="true"]');
+  if (!pitchButtons || pitchButtons.length === 0) return;
+
+  const picksMap = await loadMyTeamPicks();
+  const bootstrap = await getBootstrapData();
+  if (!picksMap || !bootstrap) return;
+
+  pitchButtons.forEach(btn => {
+    // استخراج اسم وسعر اللاعب من نص الزر
+    const textLines = btn.innerText.split('\n').map(t => t.trim()).filter(Boolean);
+    let playerName = null;
+
+    for (const line of textLines) {
+      if (!line.startsWith('£') && !line.startsWith('Fixture:') && !line.includes('(') && !playerName) {
+        playerName = line;
+      }
+    }
+
+    if (!playerName) return;
+
+    // مطابقة اللاعب
+    let playerId = bootstrap.nameToId.get(playerName.toLowerCase());
+    let playerObj = null;
+    if (playerId) {
+      playerObj = bootstrap.idToElement.get(playerId);
+    } else {
+      for (const [id, el] of bootstrap.idToElement.entries()) {
+        if (el.web_name.toLowerCase() === playerName.toLowerCase()) {
+          playerId = id;
+          playerObj = el;
+          break;
         }
-      });
-    });
-  });
+      }
+    }
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+    if (!playerId || !playerObj) return;
 
-  console.log('✅ Observer active');
+    const pickData = picksMap.get(playerId);
+    if (!pickData) return;
+
+    // السعر الحالي الرسمي للاعب في السوق (الذي يحدد ربحك الحقيقي)
+    const marketPrice = (playerObj.now_cost / 10).toFixed(1);
+    const isAlert = shouldShowPitchAlert(pickData, marketPrice);
+
+    let badge = btn.querySelector('.fpl-pitch-alert-badge');
+
+    if (isAlert) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'fpl-pitch-alert-badge';
+        badge.innerHTML = '?';
+        btn.style.position = 'relative';
+        btn.appendChild(badge);
+      }
+      const pred = pickData.predictedProgress;
+      const profit = (parseFloat(marketPrice) - parseFloat(pickData.purchasePrice)).toFixed(1);
+      badge.title = `⚠️ Price Drop Alert: Predicted Progress is ${pred}% (Risk >= 75%) & Profit is +${profit}m (Even)`;
+    } else if (badge) {
+      badge.remove();
+    }
+  });
 }
 
-// Listen for messages from options page to sync Team ID
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'saveTeamId' && request.teamId) {
-    console.log('📨 Received Team ID update from options:', request.teamId);
-    localStorage.setItem('fpl_extension_team_id', request.teamId);
-    chrome.storage.local.set({ fpl_extension_team_id: request.teamId });
-    sendResponse({ success: true });
-  } else if (request.action === 'getTeamId') {
-    const teamId = localStorage.getItem('fpl_extension_team_id');
-    sendResponse({ teamId: teamId });
+// 9. معالجة وتحديث كارت السعر والشارة في الـ Dialog
+async function ensureDialogInfo() {
+  const dialog = document.querySelector('[role="dialog"]');
+  if (!dialog || !dialog.isConnected) {
+    activePlayerId = null;
+    return;
   }
-  return true;
-});
 
-// التهيئة عند تحميل الصفحة
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ DOM loaded');
-    observePlayerDialog();
-    // تحميل بيانات اللاعبين مسبقاً
-    fetchAllPlayers();
-  });
-} else {
-  console.log('✅ DOM already loaded');
-  observePlayerDialog();
-  fetchAllPlayers();
+  const picksMap = await loadMyTeamPicks();
+  if (!picksMap) return;
+
+  const playerInfo = await extractPlayerInfoFromDialog(dialog);
+  if (!playerInfo) return;
+
+  activePlayerId = playerInfo.playerId;
+  const pickData = picksMap.get(playerInfo.playerId);
+  if (pickData) {
+    addPurchaseInfo(dialog, pickData, playerInfo.playerName);
+  }
 }
 
-console.log('✅ Extension loaded!');
+// 10. الجدولة الذكية للتحقق الدوري (Debounced)
+function scheduleCheck() {
+  if (ensureTimer) clearTimeout(ensureTimer);
+  ensureTimer = setTimeout(() => {
+    ensureDialogInfo();
+  }, 100);
+
+  if (pitchTimer) clearTimeout(pitchTimer);
+  pitchTimer = setTimeout(() => {
+    updatePitchAlertBadges();
+  }, 200);
+}
+
+// 11. MutationObserver لمراقبة DOM
+function observeDialogs() {
+  const observer = new MutationObserver((mutations) => {
+    let shouldCheck = false;
+
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (
+          (node.getAttribute && (node.getAttribute('role') === 'dialog' || node.getAttribute('data-pitch-element') === 'true')) ||
+          (node.querySelector && (node.querySelector('[role="dialog"]') || node.querySelector('button[data-pitch-element="true"]') || node.querySelector('[class*="priceSection"]'))) ||
+          (node.closest && (node.closest('[role="dialog"]') || node.closest('button[data-pitch-element="true"]')))
+        ) {
+          shouldCheck = true;
+          break;
+        }
+      }
+      if (shouldCheck) break;
+    }
+
+    if (shouldCheck) {
+      scheduleCheck();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  console.log('👀 Observer active and monitoring for pitch players & dialogs');
+}
+
+// البدء والتهيئة
+async function init() {
+  observeDialogs();
+  await getBootstrapData();
+  await loadMyTeamPicks();
+  updatePitchAlertBadges();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

@@ -1,158 +1,30 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FPL Purchase Price</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            width: 320px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #541e5d 0%, #37003c 100%);
-            color: white;
-            padding: 0;
-        }
-
-        .header {
-            padding: 20px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
-        h1 {
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        .subtitle {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        .content {
-            padding: 20px;
-        }
-
-        .team-id-display {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .team-id-label {
-            font-size: 11px;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
-        .team-id-value {
-            font-size: 20px;
-            font-weight: 700;
-            font-family: monospace;
-            letter-spacing: 1px;
-        }
-
-        .team-id-none {
-            font-size: 14px;
-            opacity: 0.8;
-            font-style: italic;
-        }
-
-        .button {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: white;
-            color: #764ba2;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-            text-decoration: none;
-            margin-bottom: 10px;
-        }
-
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .button:active {
-            transform: translateY(0);
-        }
-
-        .button-secondary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .info {
-            font-size: 11px;
-            opacity: 0.8;
-            text-align: center;
-            margin-top: 15px;
-            line-height: 1.5;
-        }
-
-        .version {
-            text-align: center;
-            padding: 10px;
-            font-size: 10px;
-            opacity: 0.6;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FPL Purchase Price Info</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
-
 <body>
+  <div class="popup-container">
     <div class="header">
-
-        <h1>FPL Purchase Price</h1>
+      <img src="icon48.png" alt="FPL Logo" class="logo-icon">
+      <div class="title">FPL Price Info</div>
     </div>
 
-    <div class="content">
-        <div class="team-id-display">
-            <div class="team-id-label">🆔 Current Team ID:</div>
-            <div class="team-id-value" id="teamIdValue">Loading...</div>
-        </div>
-
-        <button class="button" id="openSettings">
-            ⚙️Change Team ID
-        </button>
-
-
-        <div class="info">
-            💡 Click on the player on the Transfers page<br>
-            To display your
-            purchase price.
-            <br>
-            Current price-Selling price
-        </div>
+    <div class="status-badge">
+      <span class="pulse-dot"></span>
+      <span>Active &amp; Connected</span>
     </div>
 
+    <p class="description">
+      Purchase price, selling price, profit/loss and predicted progress are automatically displayed when opening any squad player's profile.
+    </p>
 
-    <div class="version">v1.0</div>
-
-    <script src="popup.js"></script>
+    <div class="footer">
+      Version 2.2 • Powered by Official FPL API
+    </div>
+  </div>
 </body>
-
 </html>
